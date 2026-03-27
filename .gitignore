@@ -12,6 +12,9 @@
 /.next/
 /out/
 
+# temporary backup during npm run build:static
+.static-export-backup/
+
 # production
 /build
 
