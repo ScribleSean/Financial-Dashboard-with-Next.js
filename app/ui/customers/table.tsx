@@ -1,43 +1,47 @@
-import Image from 'next/image';
+'use client';
+
+import { filterCustomersRowsByQuery } from '@/app/lib/demo-queries';
+import { FormattedCustomersTable } from '@/app/lib/definitions';
 import { lusitana } from '@/app/ui/fonts';
 import Search from '@/app/ui/search';
-import {
-  CustomersTableType,
-  FormattedCustomersTable,
-} from '@/app/lib/definitions';
+import Avatar from '@/app/ui/avatar';
+import { useSearchParams } from 'next/navigation';
+import { useMemo } from 'react';
 
-export default async function CustomersTable({
+export default function CustomersTable({
   customers,
 }: {
   customers: FormattedCustomersTable[];
 }) {
+  const searchParams = useSearchParams();
+  const query = searchParams.get('query') ?? '';
+
+  const visible = useMemo(
+    () => filterCustomersRowsByQuery(customers, query),
+    [customers, query],
+  );
+
   return (
     <div className="w-full">
-      <h1 className={`${lusitana.className} mb-8 text-xl md:text-2xl`}>
+      <h1 className={`${lusitana.className} mb-8 text-xl md:text-2xl dark:text-slate-100`}>
         Customers
       </h1>
-      <Search placeholder="Search customers..." />
+      <Search placeholder="Search customers..." defaultValue={query} />
       <div className="mt-6 flow-root">
         <div className="overflow-x-auto">
           <div className="inline-block min-w-full align-middle">
-            <div className="overflow-hidden rounded-md bg-gray-50 p-2 md:pt-0">
+            <div className="overflow-hidden rounded-md bg-gray-50 p-2 md:pt-0 dark:bg-slate-900">
               <div className="md:hidden">
-                {customers?.map((customer) => (
+                {visible?.map((customer) => (
                   <div
                     key={customer.id}
-                    className="mb-2 w-full rounded-md bg-white p-4"
+                    className="mb-2 w-full rounded-md bg-white p-4 dark:bg-slate-950"
                   >
                     <div className="flex items-center justify-between border-b pb-4">
                       <div>
                         <div className="mb-2 flex items-center">
                           <div className="flex items-center gap-3">
-                            <Image
-                              src={customer.image_url}
-                              className="rounded-full"
-                              alt={`${customer.name}'s profile picture`}
-                              width={28}
-                              height={28}
-                            />
+                            <Avatar name={customer.name} size={28} />
                             <p>{customer.name}</p>
                           </div>
                         </div>
@@ -62,7 +66,7 @@ export default async function CustomersTable({
                   </div>
                 ))}
               </div>
-              <table className="hidden min-w-full rounded-md text-gray-900 md:table">
+              <table className="hidden min-w-full rounded-md text-gray-900 dark:text-slate-100 md:table">
                 <thead className="rounded-md bg-gray-50 text-left text-sm font-normal">
                   <tr>
                     <th scope="col" className="px-4 py-5 font-medium sm:pl-6">
@@ -84,17 +88,11 @@ export default async function CustomersTable({
                 </thead>
 
                 <tbody className="divide-y divide-gray-200 text-gray-900">
-                  {customers.map((customer) => (
+                  {visible.map((customer) => (
                     <tr key={customer.id} className="group">
                       <td className="whitespace-nowrap bg-white py-5 pl-4 pr-3 text-sm text-black group-first-of-type:rounded-md group-last-of-type:rounded-md sm:pl-6">
                         <div className="flex items-center gap-3">
-                          <Image
-                            src={customer.image_url}
-                            className="rounded-full"
-                            alt={`${customer.name}'s profile picture`}
-                            width={28}
-                            height={28}
-                          />
+                          <Avatar name={customer.name} size={28} />
                           <p>{customer.name}</p>
                         </div>
                       </td>
