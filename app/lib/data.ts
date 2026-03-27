@@ -9,30 +9,38 @@ import {
   Revenue,
 } from './definitions';
 import { formatCurrency } from './utils';
+import {
+  getDemoAllInvoicesTable,
+  getDemoCardData,
+  getDemoCustomers,
+  getDemoFilteredCustomers,
+  getDemoFilteredInvoices,
+  getDemoInvoiceById,
+  getDemoInvoiceExportRows,
+  getDemoInvoicesPages,
+  getDemoLatestInvoices,
+  getDemoRevenue,
+} from './demo-queries';
+
+function postgresConfigured(): boolean {
+  return Boolean(process.env.POSTGRES_URL);
+}
 
 export async function fetchRevenue() {
-  // Add noStore() here to prevent the response from being cached.
-  // This is equivalent to in fetch(..., {cache: 'no-store'}).
-
+  if (!postgresConfigured()) return getDemoRevenue();
   try {
-    // Artificially delay a response for demo purposes.
-    // Don't do this in production :)
-
-    // console.log('Fetching revenue data...');
-    // await new Promise((resolve) => setTimeout(resolve, 3000));
-
     const data = await sql<Revenue>`SELECT * FROM revenue`;
-
-    // console.log('Data fetch completed after 3 seconds.');
-
     return data.rows;
   } catch (error) {
     console.error('Database Error:', error);
-    throw new Error('Failed to fetch revenue data.');
+    return getDemoRevenue();
   }
 }
 
 export async function fetchLatestInvoices() {
+  if (!postgresConfigured()) {
+    return getDemoLatestInvoices();
+  }
   try {
     const data = await sql<LatestInvoiceRaw>`
       SELECT invoices.amount, customers.name, customers.image_url, customers.email, invoices.id
@@ -41,22 +49,19 @@ export async function fetchLatestInvoices() {
       ORDER BY invoices.date DESC
       LIMIT 5`;
 
-    const latestInvoices = data.rows.map((invoice) => ({
+    return data.rows.map((invoice) => ({
       ...invoice,
       amount: formatCurrency(invoice.amount),
     }));
-    return latestInvoices;
   } catch (error) {
     console.error('Database Error:', error);
-    throw new Error('Failed to fetch the latest invoices.');
+    return getDemoLatestInvoices();
   }
 }
 
 export async function fetchCardData() {
+  if (!postgresConfigured()) return getDemoCardData();
   try {
-    // You can probably combine these into a single SQL query
-    // However, we are intentionally splitting them to demonstrate
-    // how to initialize multiple queries in parallel with JS.
     const invoiceCountPromise = sql`SELECT COUNT(*) FROM invoices`;
     const customerCountPromise = sql`SELECT COUNT(*) FROM customers`;
     const invoiceStatusPromise = sql`SELECT
@@ -83,15 +88,43 @@ export async function fetchCardData() {
     };
   } catch (error) {
     console.error('Database Error:', error);
-    throw new Error('Failed to fetch card data.');
+    return getDemoCardData();
   }
 }
 
 const ITEMS_PER_PAGE = 6;
+
+/** Full list for client-side filtering (also used for static export). */
+export async function fetchAllInvoicesForTable(): Promise<InvoicesTable[]> {
+  if (!postgresConfigured()) return getDemoAllInvoicesTable();
+  try {
+    const invoices = await sql<InvoicesTable>`
+      SELECT
+        invoices.id,
+        invoices.amount,
+        invoices.date,
+        invoices.status,
+        customers.name,
+        customers.email,
+        customers.image_url
+      FROM invoices
+      JOIN customers ON invoices.customer_id = customers.id
+      ORDER BY invoices.date DESC
+    `;
+    return invoices.rows;
+  } catch (error) {
+    console.error('Database Error:', error);
+    return getDemoAllInvoicesTable();
+  }
+}
+
 export async function fetchFilteredInvoices(
   query: string,
   currentPage: number,
 ) {
+  if (!postgresConfigured()) {
+    return getDemoFilteredInvoices(query, currentPage);
+  }
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
   try {
@@ -119,11 +152,12 @@ export async function fetchFilteredInvoices(
     return invoices.rows;
   } catch (error) {
     console.error('Database Error:', error);
-    throw new Error('Failed to fetch invoices.');
+    return getDemoFilteredInvoices(query, currentPage);
   }
 }
 
 export async function fetchInvoicesPages(query: string) {
+  if (!postgresConfigured()) return getDemoInvoicesPages(query);
   try {
     const count = await sql`SELECT COUNT(*)
     FROM invoices
@@ -136,15 +170,17 @@ export async function fetchInvoicesPages(query: string) {
       invoices.status ILIKE ${`%${query}%`}
   `;
 
-    const totalPages = Math.ceil(Number(count.rows[0].count) / ITEMS_PER_PAGE);
-    return totalPages;
+    return Math.ceil(Number(count.rows[0].count) / ITEMS_PER_PAGE);
   } catch (error) {
     console.error('Database Error:', error);
-    throw new Error('Failed to fetch total number of invoices.');
+    return getDemoInvoicesPages(query);
   }
 }
 
 export async function fetchInvoiceById(id: string) {
+  if (!postgresConfigured()) {
+    return getDemoInvoiceById(id);
+  }
   try {
     const data = await sql<InvoiceForm>`
       SELECT
@@ -156,20 +192,20 @@ export async function fetchInvoiceById(id: string) {
       WHERE invoices.id = ${id};
     `;
 
-    const invoice = data.rows.map((invoice) => ({
-      ...invoice,
-      // Convert amount from cents to dollars
-      amount: invoice.amount / 100,
+    const invoice = data.rows.map((row) => ({
+      ...row,
+      amount: row.amount / 100,
     }));
 
     return invoice[0];
   } catch (error) {
     console.error('Database Error:', error);
-    throw new Error('Failed to fetch invoice.');
+    return getDemoInvoiceById(id);
   }
 }
 
 export async function fetchCustomers() {
+  if (!postgresConfigured()) return getDemoCustomers();
   try {
     const data = await sql<CustomerField>`
       SELECT
@@ -179,15 +215,15 @@ export async function fetchCustomers() {
       ORDER BY name ASC
     `;
 
-    const customers = data.rows;
-    return customers;
+    return data.rows;
   } catch (err) {
     console.error('Database Error:', err);
-    throw new Error('Failed to fetch all customers.');
+    return getDemoCustomers();
   }
 }
 
 export async function fetchFilteredCustomers(query: string) {
+  if (!postgresConfigured()) return getDemoFilteredCustomers(query);
   try {
     const data = await sql<CustomersTableType>`
 		SELECT
@@ -207,25 +243,69 @@ export async function fetchFilteredCustomers(query: string) {
 		ORDER BY customers.name ASC
 	  `;
 
-    const customers = data.rows.map((customer) => ({
+    return data.rows.map((customer) => ({
       ...customer,
       total_pending: formatCurrency(customer.total_pending),
       total_paid: formatCurrency(customer.total_paid),
     }));
-
-    return customers;
   } catch (err) {
     console.error('Database Error:', err);
-    throw new Error('Failed to fetch customer table.');
+    return getDemoFilteredCustomers(query);
+  }
+}
+
+export type InvoiceExportRow = {
+  id: string;
+  customer: string;
+  email: string;
+  amount: string;
+  date: string;
+  status: string;
+};
+
+export async function fetchInvoiceExportRows(): Promise<InvoiceExportRow[]> {
+  if (!postgresConfigured()) return getDemoInvoiceExportRows();
+  try {
+    const data = await sql<{
+      id: string;
+      name: string;
+      email: string;
+      amount: number;
+      date: string;
+      status: string;
+    }>`
+      SELECT
+        invoices.id,
+        customers.name,
+        customers.email,
+        invoices.amount,
+        invoices.date,
+        invoices.status
+      FROM invoices
+      JOIN customers ON invoices.customer_id = customers.id
+      ORDER BY invoices.date DESC
+    `;
+    return data.rows.map((r) => ({
+      id: r.id,
+      customer: r.name,
+      email: r.email,
+      amount: formatCurrency(r.amount),
+      date: r.date,
+      status: r.status,
+    }));
+  } catch (error) {
+    console.error('Database Error:', error);
+    return getDemoInvoiceExportRows();
   }
 }
 
 export async function getUser(email: string) {
+  if (!postgresConfigured()) return undefined;
   try {
     const user = await sql`SELECT * FROM users WHERE email=${email}`;
     return user.rows[0] as User;
   } catch (error) {
     console.error('Failed to fetch user:', error);
-    throw new Error('Failed to fetch user.');
+    return undefined;
   }
 }
