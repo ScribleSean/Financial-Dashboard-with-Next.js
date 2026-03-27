@@ -2,7 +2,9 @@
   "private": true,
   "scripts": {
     "build": "next build",
+    "build:static": "node scripts/build-static.mjs",
     "dev": "next dev",
+    "seed": "node -r dotenv/config scripts/seed.js",
     "prettier": "prettier --write --ignore-unknown .",
     "prettier:check": "prettier --check --ignore-unknown .",
     "start": "next start"
@@ -19,6 +21,7 @@
     "postcss": "8.4.31",
     "react": "18.2.0",
     "react-dom": "18.2.0",
+    "recharts": "^3.8.1",
     "tailwindcss": "3.3.3",
     "typescript": "5.2.2",
     "zod": "^3.22.2"
