@@ -1,5 +1,6 @@
 'use client';
 
+import { updateInvoice } from '@/app/lib/actions/invoices';
 import { CustomerField, InvoiceForm } from '@/app/lib/definitions';
 import {
   CheckIcon,
@@ -18,8 +19,9 @@ export default function EditInvoiceForm({
   customers: CustomerField[];
 }) {
   return (
-    <form>
-      <div className="rounded-md bg-gray-50 p-4 md:p-6">
+    <form action={updateInvoice}>
+      <input type="hidden" name="id" value={invoice.id} />
+      <div className="rounded-md bg-gray-50 p-4 md:p-6 dark:bg-slate-900">
         {/* Customer Name */}
         <div className="mb-4">
           <label htmlFor="customer" className="mb-2 block text-sm font-medium">
