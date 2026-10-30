@@ -135,4 +135,4 @@ Then use the same demo user after seeding, or create users per your schema.
 
 ## License
 
-Private project; course curriculum remains © Vercel / Next.js contributors where applicable.
+[MIT](LICENSE). The starter code comes from the [Next.js Learn dashboard course](https://github.com/vercel/next-learn) by Vercel, also under the MIT License.
